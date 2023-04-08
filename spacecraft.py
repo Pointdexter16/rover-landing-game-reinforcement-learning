@@ -83,7 +83,7 @@ def rotate_image_at_center(image,angle,x,y)->pygame.surface:
     new_rect=rotated_image.get_rect(center=image.get_rect(center=(x,y)).center)
     return rotated_image,new_rect
 
-def space_craft_movement(image,landing_gear,acceleration,side_acceleration):
+def space_craft_movement(image,acceleration,side_acceleration):
     global space_craft_y #all the variable are global as the scope of these varibles is outside the function
     global space_craft_x
     global velocity_y
@@ -129,7 +129,6 @@ def space_craft_movement(image,landing_gear,acceleration,side_acceleration):
         velocity_x=0
 
     image=pygame.transform.rotate(image,orientation)
-    landing_gear=pygame.transform.rotate(landing_gear,orientation)
     landing_gear_x_left,landing_gear_y_left=point_tracking(25,100,orientation)
     landing_gear_x_right,landing_gear_y_right=point_tracking(75,100,orientation)
     pygame.draw.circle(window,(255,0,0),(space_craft_x,space_craft_y),2)
@@ -235,7 +234,7 @@ while running:
 
     
    
-    space_craft_movement(space_craft,landing_gear,thrust,thrust_side)
+    space_craft_movement(space_craft,thrust,thrust_side)
     status()
     # window.blit(space_craft_180,(250,250))
     pygame.display.update()
