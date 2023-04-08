@@ -1,18 +1,19 @@
 import pygame
 import time
 import random
-from math import sin,cos,tan
+from math import sin,cos,tan,radians,sqrt
 import math
 
 pygame.init()
 
 clock=pygame.time.Clock()
 
-window=pygame.display.set_mode((1000,700))
+window=pygame.display.set_mode((1000,650))
 
 running=True
 
 space_craft=pygame.image.load('space_ship.png') #dimensions->100X100px
+bg=pygame.image.load('space.png')#dimensions->1000x650
 
 space_craft_180=pygame.transform.rotate(space_craft,-20.5)
 
@@ -42,7 +43,47 @@ gas_color=[]
 upper_threshold=[]
 lower_threshold=[]
 
-def space_craft_movement(image,acceleration,side_acceleration):
+def point_tracking(x_off_set_val,y_off_set_val,orientation):    
+    if 0>=orientation>-90:
+        norientation=-orientation
+        landing_gear_x=space_craft_x+(y_off_set_val*cos(radians(90-norientation)))+(x_off_set_val*cos(radians(norientation)))-(y_off_set_val*sin(radians(norientation)))
+        landing_gear_y=space_craft_y+(x_off_set_val*sin(radians(norientation)))+(y_off_set_val*cos(radians(norientation))) 
+    elif 0<orientation<90:
+        landing_gear_x=space_craft_x+(x_off_set_val*cos(radians(orientation)))+(y_off_set_val*sin(radians(orientation)))
+        landing_gear_y=space_craft_y+(y_off_set_val*cos(radians(90-orientation)))-(x_off_set_val*sin(radians(orientation)))+(y_off_set_val*cos(radians(orientation)))  
+    elif -90>=orientation>-180:
+        norientation=(-orientation)-90
+        landing_gear_x=space_craft_x+y_off_set_val*(sqrt(2)*cos(radians((90-(2*norientation))/2)))-(x_off_set_val*sin(radians(norientation)))-(y_off_set_val*cos(radians(norientation)))
+        landing_gear_y=space_craft_y+(y_off_set_val*cos(radians(90-norientation)))+(x_off_set_val*cos(radians(norientation)))-(y_off_set_val*sin(radians(norientation)))
+    elif 90<=orientation<180:
+        norientation=orientation-90
+        landing_gear_x=space_craft_x+y_off_set_val*(cos(radians(90-norientation)))-x_off_set_val*(sin(radians(norientation)))+y_off_set_val*(cos(radians(norientation)))
+        landing_gear_y=space_craft_y+y_off_set_val*(sqrt(2)*cos(radians((90-(2*norientation))/2)))-(x_off_set_val*cos(radians(norientation)))-(y_off_set_val*sin(radians(norientation)))        
+    elif -180>=orientation>-270:
+        norientation=(-orientation)-180
+        landing_gear_x=space_craft_x+(y_off_set_val*cos(radians(norientation)))-(x_off_set_val*cos(radians(norientation)))+(y_off_set_val*sin(radians(norientation)))
+        landing_gear_y=space_craft_y+y_off_set_val*(sqrt(2)*cos(radians((90-(2*norientation))/2)))-(x_off_set_val*sin(radians(norientation)))-(y_off_set_val*cos(radians(norientation)))
+    elif 180<=orientation<270:
+        norientation=orientation-180
+        landing_gear_x=space_craft_x+y_off_set_val*(sqrt(2)*cos(radians((90-(2*norientation))/2)))-(x_off_set_val*cos(radians(norientation)))-(y_off_set_val*sin(radians(norientation)))
+        landing_gear_y=space_craft_y+y_off_set_val*(cos(radians(norientation)))+(x_off_set_val*sin(radians(norientation)))-(y_off_set_val*cos(radians(norientation)))
+    elif -270>=orientation>=-360:
+        norientation=(-orientation)-270
+        landing_gear_x=space_craft_x+(x_off_set_val*sin(radians(norientation)))+(y_off_set_val*cos(radians(norientation)))
+        landing_gear_y=space_craft_y+(y_off_set_val*cos(radians(norientation)))-(x_off_set_val*cos(radians(norientation)))+(y_off_set_val*sin(radians(norientation)))
+    elif 270<=orientation<=360:
+        norientation=orientation-270
+        landing_gear_x=space_craft_x+(y_off_set_val*cos(radians(norientation)))+(x_off_set_val*sin(radians(norientation)))-(y_off_set_val*cos(radians(norientation)))
+        landing_gear_y=space_craft_y+(x_off_set_val*cos(radians(norientation)))+(y_off_set_val*sin(radians(norientation)))
+    return landing_gear_x,landing_gear_y
+
+def rotate_image_at_center(image,angle,x,y)->pygame.surface:
+
+    rotated_image=pygame.transform.rotate(image,angle)
+    new_rect=rotated_image.get_rect(center=image.get_rect(center=(x,y)).center)
+    return rotated_image,new_rect
+
+def space_craft_movement(image,landing_gear,acceleration,side_acceleration):
     global space_craft_y #all the variable are global as the scope of these varibles is outside the function
     global space_craft_x
     global velocity_y
@@ -76,10 +117,11 @@ def space_craft_movement(image,acceleration,side_acceleration):
     space_craft_x+=s_x
 
 
+
     if orientation>360 or orientation<-360:
         orientation=0 # recalibrate oritentation after exceeding 360 or -360 back to 0 
-    if space_craft_y>600:
-        space_craft_y=600
+    if space_craft_y>500:
+        space_craft_y=500
         if movement==0:             # After hitting the ground if movement is 0 impact velocity is registered and movement is assigned 1 then if any arrow key is pressed except for down then movement becomes 0 again
             impact_velocity=velocity_y
             movement=1
@@ -87,7 +129,18 @@ def space_craft_movement(image,acceleration,side_acceleration):
         velocity_x=0
 
     image=pygame.transform.rotate(image,orientation)
+    landing_gear=pygame.transform.rotate(landing_gear,orientation)
+    landing_gear_x_left,landing_gear_y_left=point_tracking(25,100,orientation)
+    landing_gear_x_right,landing_gear_y_right=point_tracking(75,100,orientation)
+    pygame.draw.circle(window,(255,0,0),(space_craft_x,space_craft_y),2)
+    len_of_landing_gear=60
+    landing_gear_angle_right=radians(45+orientation)
+    landing_gear_angle_left=radians(-45+orientation)
+    pygame.draw.line(window,(255,255,255),(landing_gear_x_right,landing_gear_y_right),(landing_gear_x_right+(len_of_landing_gear*sin(landing_gear_angle_right)),landing_gear_y_right+(len_of_landing_gear*cos(landing_gear_angle_right))),7)
+    pygame.draw.line(window,(255,255,255),(landing_gear_x_left,landing_gear_y_left),(landing_gear_x_left+(len_of_landing_gear*sin(landing_gear_angle_left)),landing_gear_y_left+(len_of_landing_gear*cos(landing_gear_angle_left))),7)
     window.blit(image,(space_craft_x,space_craft_y))
+
+
 #scope of optimizaton
 def gas_exhaust():
     global gas_state
@@ -132,7 +185,7 @@ second_count=1
 movement=0
 
 while running:
-    window.fill((0,0,0))
+    window.blit(bg,(0,0))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running=False
@@ -182,7 +235,7 @@ while running:
 
     
    
-    space_craft_movement(space_craft,thrust,thrust_side)
+    space_craft_movement(space_craft,landing_gear,thrust,thrust_side)
     status()
     # window.blit(space_craft_180,(250,250))
     pygame.display.update()
