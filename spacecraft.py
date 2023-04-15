@@ -111,7 +111,6 @@ def net_energy_tracker():
     p_e=MASS*ACCE_MOON*(WINDOW_Y-center_y)
     spring_e=-1/2*K_LG*(spring_comp**2)
     t_e=k_e+p_e+spring_e
-    if t_e<0:print("done")
     return t_e
 
 def space_craft_movement(image,acceleration,side_acceleration):
