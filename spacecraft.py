@@ -1,8 +1,8 @@
-from os import terminal_size
+
 import pygame
 import time
 import random
-from math import sin,cos,tan,radians,sqrt
+from math import sin,cos,radians,sqrt
 import math
 
 
@@ -56,7 +56,33 @@ gas_color=[]
 upper_threshold=[]
 lower_threshold=[]
 
-def point_tracking(x_off_set_val,y_off_set_val):    
+
+
+def terrain(land_gear_left_end_x,land_gear_right_end_x):
+    global space_craft_y
+    global movement
+    global velocity_y
+    global impact_velocity
+    global velocity_x
+    global land_gear_left_end_y
+    global land_gear_right_end_y
+    radian_multiplier=6.28318531/WINDOW_X
+    for i in range(WINDOW_X):
+        t_y=WINDOW_Y-100*cos(i*radian_multiplier)
+        if (i==land_gear_left_end_x or i==land_gear_right_end_x)and(land_gear_left_end_y>t_y or land_gear_right_end_y>t_y):
+            if land_gear_left_end_y>t_y and i==land_gear_left_end_x: land_gear_left_end_y=t_y;print('here')
+            if land_gear_right_end_y>t_y and i==land_gear_right_end_x: land_gear_right_end_y=t_y
+            if movement==0 and not(pressed_up):             # After hitting the ground if movement is 0 impact velocity is registered and movement is assigned 1 then if any arrow key is pressed except for down then movement becomes 0 again
+                impact_velocity=velocity_y
+                movement=1
+                velocity_x=0
+        if space_craft_y>=550:
+            space_craft_y=550
+            velocity_x=0
+            velocity_y=0
+        pygame.draw.circle(window,(255,255,255),(i,t_y),1)
+
+def point_tracking(x_off_set_val,y_off_set_val,X=True,Y=True):    
     if 0>=orientation>-90:
         norientation=-orientation
         x=space_craft_x+(100*cos(radians(90-norientation)))+(x_off_set_val*cos(radians(norientation)))-(y_off_set_val*sin(radians(norientation)))
@@ -88,7 +114,12 @@ def point_tracking(x_off_set_val,y_off_set_val):
         norientation=orientation-270
         x=space_craft_x+(100*cos(radians(norientation)))+(x_off_set_val*sin(radians(norientation)))-(y_off_set_val*cos(radians(norientation)))
         y=space_craft_y+(x_off_set_val*cos(radians(norientation)))+(y_off_set_val*sin(radians(norientation)))
-    return x,y
+    if X and Y:
+        return x,y
+    elif X:
+        return x
+    else:
+        return y
 
 def number(num):
     i=0
@@ -124,6 +155,7 @@ def space_craft_movement(image,acceleration,side_acceleration):
     global landing_gear_y_left
     global center_y
     global spring_comp
+    global impact_velocity
 
 
     orientation=orientation+change_orientation_right+change_orientation_left
@@ -175,14 +207,19 @@ def space_craft_movement(image,acceleration,side_acceleration):
         space_craft_y=550
         velocity_x=0
         velocity_y=0
+
+    # WINDOW_Y-100*cos(i*radian_multiplier)
+    
             
 
     image=pygame.transform.rotate(image,orientation)
     pygame.draw.circle(window,(255,0,0),(space_craft_x,space_craft_y),2)
-    pygame.draw.line(window,(255,255,255),(landing_gear_x_right,landing_gear_y_right),(land_gear_right_end_x,land_gear_right_end_y),7)
-    pygame.draw.line(window,(255,255,255),(landing_gear_x_left,landing_gear_y_left),(land_gear_left_end_x,land_gear_left_end_y),7)
+    pygame.draw.aaline(window,(255,255,255),(landing_gear_x_right,landing_gear_y_right),(land_gear_right_end_x,land_gear_right_end_y),7)
+    pygame.draw.aaline(window,(255,255,255),(landing_gear_x_left,landing_gear_y_left),(land_gear_left_end_x,land_gear_left_end_y),7)
     window.blit(image,(space_craft_x,space_craft_y))
     pygame.draw.circle(window,(255,0,0),(center_x,center_y),2)
+    pygame.draw.line(window,(255,255,255),(WINDOW_X/2-75,WINDOW_Y),(WINDOW_X/2+75,WINDOW_Y),10)
+    terrain(land_gear_left_end_x,land_gear_right_end_x)
 
 
 #scope of optimizaton
@@ -196,8 +233,8 @@ def gas_exhaust():
             gas_dis.append(0) #keeps track of the total distance covered by the gas particle
             lower_threshold.append(i*5) 
             upper_threshold.append(50+(i*5))
-            gas_x.append(space_craft_x+50) # gas x,y cordinate 
-            gas_y.append(space_craft_y+100)
+            gas_x.append(point_tracking(50,110,Y=False)) # gas x,y cordinate 
+            gas_y.append(point_tracking(50,110,X=False))
             gas_color.append(random.randint(50,255))
         gas_state='vented'
     
@@ -242,15 +279,15 @@ while running:
             running=False
         # while key is pressed
         if event.type == pygame.KEYDOWN:
-            movement=0
             if event.key == pygame.K_UP:
+                movement=0
                 pressed_up=True
                 thrust=-45000
                 gas_exhaust()
             if event.key == pygame.K_LEFT:
-                change_orientation_left=0.5
+                if not(movement):change_orientation_left=0.5
             if event.key == pygame.K_RIGHT:
-                change_orientation_right=-0.5
+                if not(movement):change_orientation_right=-0.5
             if event.key == pygame.K_d:
                 thrust_right=5
             if event.key == pygame.K_a:
@@ -275,8 +312,8 @@ while running:
     if gas_state=='vented':
         for i in range(30):
             gas_dis[i]+=5 #as in every iteration the gas particles move by 5px so it is incremented by 5 everytime
-            gas_y[i]+=gas_len_y[i]
-            gas_x[i]+=tan(orientation*(math.pi/180))*gas_len_y[i]
+            gas_y[i]+=gas_len_y[i]*cos(radians(orientation))
+            gas_x[i]+=sin(radians(orientation))*gas_len_y[i]
             if lower_threshold[i]<gas_dis[i]<upper_threshold[i]: #limits the range of motion of gas particles
                 if gas_y[i]-space_craft_y-30<0 or gas_y[i]-space_craft_y>random.randint(100,200):# all the gas particle will be rendered untill they have covered a distance of 30px after that the permitted distance will be randomlly decided
                     pass
@@ -284,7 +321,7 @@ while running:
                     pygame.draw.circle(window,(gas_color[i],100,100),(gas_x[i],gas_y[i]),5)
             elif gas_dis[i]>=upper_threshold[i]:
                 gas_dis[i]=0 #recaliberate all the variables one the gas particle has hit the upper_threshold
-                gas_x[i],gas_y[i]=space_craft_x+50,space_craft_y+100
+                gas_x[i],gas_y[i]=point_tracking(50,100)
 
     
    
