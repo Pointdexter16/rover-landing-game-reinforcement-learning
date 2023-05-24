@@ -1,9 +1,11 @@
 
+from tkinter import Y
 import pygame
 import time
 import random
 from math import sin,cos,radians,sqrt
 import math
+from  threading import Thread,get_ident
 
 
 pygame.init()
@@ -72,7 +74,37 @@ def terrain():
         t_y=WINDOW_Y-100*cos(i*radian_multiplier)
         terrain_array.append(t_y)
 
-        
+def engine_status(c:list):
+    """
+        arg->[center_x,center_y,raduis]
+    """
+    x=c[0]
+    y=c[1]
+    r=c[2]
+    black=(0,0,0)
+    white=(255,255,255)
+    color=black if not(engine_active) else white
+    pygame.draw.circle(window,white,(x,y),r+50)
+    pygame.draw.circle(window,black,(x,y),r+49)
+    pygame.draw.circle(window,white,(x,y),r)
+    pygame.draw.circle(window,color,(x,y),r-1)
+
+def stabilize():
+    global change_orientation_left
+    global change_orientation_right
+
+    print(get_ident())
+
+    if orientation<0:
+        change_orientation_right=0.5
+        while orientation!=0:
+            pass
+        change_orientation_right=0
+    elif orientation>0:
+        change_orientation_left=-0.5
+        while orientation!=0:
+            pass
+        change_orientation_left=0
 
 def point_tracking(x_off_set_val,y_off_set_val,X=True,Y=True):
     """
@@ -200,7 +232,7 @@ def space_craft_movement(image,acceleration,side_acceleration):
         if (landing_gear_left_end_y>t_y and i==int(landing_gear_left_end_x))or(landing_gear_right_end_y>t_y and i==int(landing_gear_right_end_x)):
                 if landing_gear_left_end_y>t_y and i==int(landing_gear_left_end_x): landing_gear_left_end_y=t_y;
                 if landing_gear_right_end_y>t_y and i==int(landing_gear_right_end_x): landing_gear_right_end_y=t_y;
-                if movement==0 and not(pressed_up):             # After hitting the ground if movement is 0 impact velocity is registered and movement is assigned 1 then if any arrow key is pressed except for down then movement becomes 0 again
+                if movement==0 and not(engine_active):             # After hitting the ground if movement is 0 impact velocity is registered and movement is assigned 1 then if any arrow key is pressed except for down then movement becomes 0 again
                     impact_velocity=velocity_y
                     movement=1
                     velocity_x=0
@@ -214,7 +246,7 @@ def space_craft_movement(image,acceleration,side_acceleration):
     if landing_gear_left_end_y>WINDOW_Y or landing_gear_right_end_y>WINDOW_Y:
         if landing_gear_left_end_y>WINDOW_Y: landing_gear_left_end_y=WINDOW_Y
         if landing_gear_right_end_y>WINDOW_Y: landing_gear_right_end_y=WINDOW_Y
-        if movement==0 and not(pressed_up):             # After hitting the ground if movement is 0 impact velocity is registered and movement is assigned 1 then if any arrow key is pressed except for down then movement becomes 0 again
+        if movement==0 and not(engine_active):             # After hitting the ground if movement is 0 impact velocity is registered and movement is assigned 1 then if any arrow key is pressed except for down then movement becomes 0 again
             impact_velocity=velocity_y
             movement=1
             velocity_x=0
@@ -245,6 +277,7 @@ def space_craft_movement(image,acceleration,side_acceleration):
     window.blit(image,(space_craft_x,space_craft_y))
     pygame.draw.circle(window,(255,0,0),(center_x,center_y),2)
     pygame.draw.line(window,(255,255,255),(WINDOW_X/2-75,WINDOW_Y),(WINDOW_X/2+75,WINDOW_Y),10)
+    engine_status([900,100,10])
 
 
 #scope of optimizaton
@@ -292,7 +325,7 @@ second_count=1
 
 movement=0
 
-pressed_up=False
+engine_active=False
 
 _,landing_gear_y_left=point_tracking(25,100)
 _,landing_gear_y_right=point_tracking(75,100)
@@ -309,7 +342,7 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 movement=0
-                pressed_up=True
+                engine_active=True
                 thrust=-45000
                 gas_exhaust()
             if event.key == pygame.K_LEFT:
@@ -320,10 +353,13 @@ while running:
                 thrust_right=5
             if event.key == pygame.K_a:
                 thrust_left=-5
+            if event.key==pygame.K_s:
+                thread_s=Thread(target=stabilize)
+                thread_s.start()
         # when key is released
         if event.type == pygame.KEYUP:
             if event.key ==  pygame.K_UP:
-                pressed_up=False
+                engine_active=False
                 thrust=0
                 gas_state='not vented'
             if event.key == pygame.K_LEFT:
