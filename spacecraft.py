@@ -7,7 +7,6 @@ from math import sin,cos,radians,sqrt
 import math
 from  threading import Thread,get_ident
 
-
 pygame.init()
 
 clock=pygame.time.Clock()
@@ -67,6 +66,23 @@ upper_threshold=[]
 lower_threshold=[]
 
 
+def dist(A,B):
+    dist=0
+    for a,b in zip(A,B):
+        dist+=(a-b)**2
+    dist=sqrt(dist)
+    return dist
+
+def init():
+    for i in range(30):
+            gas_len_x.append(0)
+            gas_len_y.append(5)
+            gas_dis.append(0) #keeps track of the total distance covered by the gas particle
+            lower_threshold.append(i*5) 
+            upper_threshold.append(50+(i*5))
+            gas_x.append(point_tracking(50,110,Y=False)) # gas x,y cordinate 
+            gas_y.append(point_tracking(50,110,X=False))
+            gas_color.append(random.randint(50,255))
 
 def terrain():
 
@@ -92,8 +108,6 @@ def engine_status(c:list):
 def stabilize():
     global change_orientation_left
     global change_orientation_right
-
-    print(get_ident())
 
     if orientation<0:
         change_orientation_right=0.5
@@ -190,6 +204,8 @@ def space_craft_movement(image,acceleration,side_acceleration):
     global landing_gear_right_end_x
     global landing_gear_right_end_y
     global spring_acc
+    global main_thruster_x
+    global main_thruster_y
 
     orientation=orientation+change_orientation_right+change_orientation_left
 
@@ -207,7 +223,7 @@ def space_craft_movement(image,acceleration,side_acceleration):
     
     
     
-
+    main_thruster_x,main_thruster_y=point_tracking(50,100)
     landing_gear_x_left,landing_gear_y_left=point_tracking(25,100)
     landing_gear_x_right,landing_gear_y_right=point_tracking(75,100)
     center_x,center_y=point_tracking(50,50)
@@ -286,14 +302,10 @@ def gas_exhaust():
 
     if gas_state=='not vented':
         for i in range(30):
-            gas_len_x.append(0)
-            gas_len_y.append(5)
-            gas_dis.append(0) #keeps track of the total distance covered by the gas particle
-            lower_threshold.append(i*5) 
-            upper_threshold.append(50+(i*5))
-            gas_x.append(point_tracking(50,110,Y=False)) # gas x,y cordinate 
-            gas_y.append(point_tracking(50,110,X=False))
-            gas_color.append(random.randint(50,255))
+            gas_dis[i]=0 #keeps track of the total distance covered by the gas particle
+            gas_x[i]=point_tracking(50,100,Y=False) # gas x,y cordinate 
+            gas_y[i]=point_tracking(50,100,X=False)
+            gas_color[i]=random.randint(50,255)
         gas_state='vented'
     
 
@@ -330,8 +342,10 @@ engine_active=False
 _,landing_gear_y_left=point_tracking(25,100)
 _,landing_gear_y_right=point_tracking(75,100)
 _,center_y=point_tracking(50,50)
+main_thruster_x,main_thruster_y=point_tracking(50,100)
 
 terrain()
+init()
 
 while running:
     window.blit(bg,(0,0))
@@ -378,17 +392,15 @@ while running:
             gas_dis[i]+=5 #as in every iteration the gas particles move by 5px so it is incremented by 5 everytime
             gas_y[i]+=gas_len_y[i]*cos(radians(orientation))
             gas_x[i]+=sin(radians(orientation))*gas_len_y[i]
+            diff=dist([gas_x[i],gas_y[i]],[main_thruster_x,main_thruster_y])
             if lower_threshold[i]<gas_dis[i]<upper_threshold[i]: #limits the range of motion of gas particles
-                if abs(gas_y[i]-space_craft_y)-30<0 or abs(gas_y[i]-space_craft_y)>random.randint(100,200):# all the gas particle will be rendered untill they have covered a distance of 30px after that the permitted distance will be randomlly decided
+                if diff>random.randint(100,200):# all the gas particle will be rendered untill they have covered a distance of 30px after that the permitted distance will be randomlly decided
                     pass
                 else:
                     pygame.draw.circle(window,(gas_color[i],100,100),(gas_x[i],gas_y[i]),5)
             elif gas_dis[i]>=upper_threshold[i]:
-                gas_dis[i]=0 #recaliberate all the variables one the gas particle has hit the upper_threshold
+                gas_dis[i]=0 #recaliberate all the variables once the gas particle has hit the upper_threshold
                 gas_x[i],gas_y[i]=point_tracking(50,100)
-
-    
-   
     space_craft_movement(space_craft,thrust/MASS,thrust_side)
     total_energy=net_energy_tracker()
     status()
@@ -401,3 +413,4 @@ while running:
     #     print(fps)
     #     fps=0
     #     second_count+=1
+# or diff>random.randint(100,200)
